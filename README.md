@@ -36,7 +36,7 @@ iex(1)> Numerator.build(%{page: 6, last: 17}, show_first: true, show_last: true)
 
 Example implementation using the Twitter Bootstrap UI framework.
 
-```elixir
+```eex
 <ul class="pagination">
 	<%= for element <- pagination_data do %>
 		<%= case element do %>
