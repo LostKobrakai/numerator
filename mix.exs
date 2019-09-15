@@ -30,7 +30,7 @@ defmodule Numerator.MixProject do
     [
       {:excoveralls, "~> 0.10", only: :test},
       {:stream_data, "~> 0.1", only: :test},
-      {:dialyxir, "~> 1.0-rc", only: :dev, runtime: false}
+      {:dialyxir, "~> 1.0-rc", only: [:dev, :test], runtime: false}
     ]
   end
 end
