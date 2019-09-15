@@ -14,12 +14,16 @@ defmodule Numerator do
            num_pages_shown: non_neg_integer()
          }
 
+  @type prev_next_element :: %{
+          type: :prev | :next,
+          page: page | :disabled
+        }
   @type page_element :: %{
-          type: :prev | :next | :page | :current,
+          type: :page | :current,
           page: page
         }
   @type ellipsis_element :: %{type: :ellipsis}
-  @type element :: page_element | ellipsis_element
+  @type element :: prev_next_element | page_element | ellipsis_element
 
   defstruct page: 1,
             first_page: 1,
@@ -28,7 +32,8 @@ defmodule Numerator do
             show_next: true,
             show_first: false,
             show_last: false,
-            num_pages_shown: 5
+            num_pages_shown: 5,
+            prev_next_unavailable_mode: :remove
 
   @doc """
   Hello world.
@@ -63,6 +68,22 @@ defmodule Numerator do
         %{type: :page, page: 5},
         %{type: :ellipsis},
         %{type: :next, page: 3}
+      ]
+
+      iex> Numerator.build(%{page: 1, last: 2}, prev_next_unavailable_mode: :disable)
+      [
+        %{type: :prev, page: :disabled},
+        %{type: :current, page: 1},
+        %{type: :page, page: 2},
+        %{type: :next, page: 2}
+      ]
+
+      iex> Numerator.build(%{page: 2, last: 2}, prev_next_unavailable_mode: :disable)
+      [
+        %{type: :prev, page: 1},
+        %{type: :page, page: 1},
+        %{type: :current, page: 2},
+        %{type: :next, page: :disabled}
       ]
 
       iex> Numerator.build(%{page: 2, last: 7}, show_last: true)
@@ -115,7 +136,14 @@ defmodule Numerator do
 
   @spec from_opts(keyword) :: keyword
   def from_opts(opts) do
-    Keyword.take(opts, [:show_prev, :show_next, :show_first, :show_last, :num_pages_shown])
+    Keyword.take(opts, [
+      :show_prev,
+      :show_next,
+      :show_first,
+      :show_last,
+      :num_pages_shown,
+      :prev_next_unavailable_mode
+    ])
   end
 
   @spec prepare_data(term) :: map | :invalid
@@ -149,36 +177,48 @@ defmodule Numerator do
 
   defp prepare_data(_), do: :invalid
 
-  @spec build_prev(t) :: list(element)
+  @spec build_prev(t) :: list(prev_next_element)
   defp build_prev(%{show_prev: false}), do: []
+
+  defp build_prev(%{page: p, first_page: p, prev_next_unavailable_mode: :disable}) do
+    [%{type: :prev, page: :disabled}]
+  end
+
   defp build_prev(%{page: p, first_page: p}), do: []
 
   defp build_prev(%{page: p, first_page: f}) when p > f do
     [%{type: :prev, page: p - 1}]
   end
 
-  @spec build_next(t) :: list(element)
+  @spec build_next(t) :: list(prev_next_element)
   defp build_next(%{show_next: false}), do: []
+
+  defp build_next(%{page: p, last_page: p, prev_next_unavailable_mode: :disable}) do
+    [%{type: :next, page: :disabled}]
+  end
+
   defp build_next(%{page: p, last_page: p}), do: []
 
   defp build_next(%{page: p, last_page: f}) when f == :undefined or p < f do
     [%{type: :next, page: p + 1}]
   end
 
-  @spec build_inbetween(t) :: list(element)
+  @spec build_inbetween(t) :: list(page_element | ellipsis_element)
   defp build_inbetween(%{num_pages_shown: 0}), do: []
 
   defp build_inbetween(config) do
     range = config.first_page..config.last_page
-    chunks = Enum.chunk_every(range, config.num_pages_shown, 1, :discard)
-    do_build_inbetween(chunks, config)
+    chunk_size = min(config.num_pages_shown, Enum.count(range))
+    chunks = Enum.chunk_every(range, chunk_size, 1, :discard)
+    do_build_inbetween(chunks, chunk_size, config)
   end
 
-  @spec do_build_inbetween(list(list(page)), t) :: list(element)
-  defp do_build_inbetween([], _config), do: []
+  @spec do_build_inbetween(list(list(page)), non_neg_integer(), t) ::
+          list(page_element | ellipsis_element)
+  defp do_build_inbetween([], _chunk_size, _config), do: []
 
-  defp do_build_inbetween(chunks, config) do
-    middle = middle(config.num_pages_shown)
+  defp do_build_inbetween(chunks, chunk_size, config) do
+    middle = middle(chunk_size)
 
     sorted_chunks =
       Enum.sort_by(chunks, fn chunk ->
@@ -217,7 +257,7 @@ defmodule Numerator do
     %{type: :page, page: num}
   end
 
-  @spec add_first(list(page_element), t) :: list(element)
+  @spec add_first(list(page_element), t) :: list(page_element | ellipsis_element)
   defp add_first([%{page: first_numbered} | _] = middle, %{first_page: first})
        when first == first_numbered do
     middle
@@ -241,12 +281,12 @@ defmodule Numerator do
     [%{type: :ellipsis} | middle]
   end
 
-  @spec add_last(list(page_element), t) :: list(element)
+  @spec add_last(list(page_element), t) :: list(page_element | ellipsis_element)
   defp add_last(middle, config) do
     add_last(List.last(middle), middle, config)
   end
 
-  @spec add_last(page_element, list(page_element), t) :: list(element)
+  @spec add_last(page_element, list(page_element), t) :: list(page_element | ellipsis_element)
   defp add_last(%{page: last_numbered}, middle, %{last_page: last})
        when last == last_numbered do
     middle
