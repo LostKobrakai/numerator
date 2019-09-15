@@ -1,6 +1,36 @@
 # Numerator
+[![Build Status](https://travis-ci.org/madeitGmbH/numerator.svg?branch=master)](https://travis-ci.org/madeitGmbH/numerator)
+[![Coverage Status](https://coveralls.io/repos/github/madeitGmbH/numerator/badge.svg?branch=master)](https://coveralls.io/github/madeitGmbH/numerator?branch=master)
 
-**TODO: Add description**
+Numerator does calculate paginations without creating any markup. Building markup based on the returned list of elements is up to the user.
+
+## Usage
+
+```elixir
+iex(1)> Numerator.build(%{page: 6, last: 17}, show_first: true, show_last: true)
+[
+  %{page: 5, type: :prev},
+  %{page: 1, type: :page},
+  %{type: :ellipsis},
+  %{page: 4, type: :page},
+  %{page: 5, type: :page},
+  %{page: 6, type: :current},
+  %{page: 7, type: :page},
+  %{page: 8, type: :page},
+  %{type: :ellipsis},
+  %{page: 17, type: :page},
+  %{page: 7, type: :next}
+]
+```
+
+## Options
+
+* `:show_prev`: Include a prev. page element. Default `true`
+* `:show_next`: Include a next page element. Default `true`
+* `:show_first`: Always show first page. Default `false`
+* `:show_last`: Always show last page. Default `false`
+* `:num_pages_shown`: How many numbers for pages to be shown at least. Default `5`
+
 
 ## Installation
 
