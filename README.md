@@ -9,7 +9,7 @@ Numerator does calculate paginations without creating any markup. Building marku
 ```elixir
 iex(1)> Numerator.build(%{page: 6, last: 17}, show_first: true, show_last: true)
 [
-  %{page: 5, type: :prev, disabled: false},
+  %{page: 5, type: :prev},
   %{page: 1, type: :page},
   %{type: :ellipsis},
   %{page: 4, type: :page},
@@ -19,7 +19,7 @@ iex(1)> Numerator.build(%{page: 6, last: 17}, show_first: true, show_last: true)
   %{page: 8, type: :page},
   %{type: :ellipsis},
   %{page: 17, type: :page},
-  %{page: 7, type: :next, disabled: false}
+  %{page: 7, type: :next}
 ]
 ```
 
