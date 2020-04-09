@@ -62,6 +62,7 @@ Example implementation using the Twitter Bootstrap UI framework.
 				<li class="page-item">
 					<%= link dgettext("pagination", "Next Page"), to: Routes.index_path(@conn, :index, %{page: page}) %>
 				</li>
+		<% end %>
 	<% end %>
 </ul>
 ```
