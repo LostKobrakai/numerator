@@ -128,7 +128,9 @@ defmodule Numerator do
 
     [
       build_prev(config),
-      build_inbetween(config),
+      build_numbering(config)
+      |> add_first(config)
+      |> add_last(config),
       build_next(config)
     ]
     |> List.flatten()
@@ -178,74 +180,50 @@ defmodule Numerator do
   defp prepare_data(_), do: :invalid
 
   @spec build_prev(t) :: list(prev_next_element)
+  # Disabled
   defp build_prev(%{show_prev: false}), do: []
 
+  # Pagination is on first page, but prev should be added disabled
   defp build_prev(%{page: p, first_page: p, prev_next_unavailable_mode: :disable}) do
     [%{type: :prev, page: :disabled}]
   end
 
+  # Pagination is on first page; prev not added
   defp build_prev(%{page: p, first_page: p}), do: []
 
+  # Add prev page
   defp build_prev(%{page: p, first_page: f}) when p > f do
     [%{type: :prev, page: p - 1}]
   end
 
   @spec build_next(t) :: list(prev_next_element)
+  # Disabled
   defp build_next(%{show_next: false}), do: []
 
+  # Pagination is on last page, but next should be added disabled
   defp build_next(%{page: p, last_page: p, prev_next_unavailable_mode: :disable}) do
     [%{type: :next, page: :disabled}]
   end
 
+  # Pagination is on last page; next not added
   defp build_next(%{page: p, last_page: p}), do: []
 
+  # Add next page
   defp build_next(%{page: p, last_page: f}) when f == :undefined or p < f do
     [%{type: :next, page: p + 1}]
   end
 
-  @spec build_inbetween(t) :: list(page_element | ellipsis_element)
-  defp build_inbetween(%{num_pages_shown: 0}), do: []
+  @spec build_numbering(t) :: list(page_element | ellipsis_element)
+  # When configured to show no numbers
+  defp build_numbering(%{num_pages_shown: 0}), do: []
 
-  defp build_inbetween(config) do
+  #
+  defp build_numbering(config) do
     range = config.first_page..config.last_page
-    chunk_size = min(config.num_pages_shown, Enum.count(range))
-    chunks = Enum.chunk_every(range, chunk_size, 1, :discard)
-    do_build_inbetween(chunks, chunk_size, config)
-  end
 
-  @spec do_build_inbetween(list(list(page)), non_neg_integer(), t) ::
-          list(page_element | ellipsis_element)
-  defp do_build_inbetween([], _chunk_size, _config), do: []
-
-  defp do_build_inbetween(chunks, chunk_size, config) do
-    middle = middle(chunk_size)
-
-    sorted_chunks =
-      Enum.sort_by(chunks, fn chunk ->
-        index = Enum.find_index(chunk, fn x -> x == config.page end)
-
-        cond do
-          is_nil(index) -> :noindex
-          index == middle -> 0
-          index < middle -> middle - index
-          index > middle -> index - middle + 1
-        end
-      end)
-
-    sorted_chunks
-    |> List.first()
+    range
+    |> Numerator.RangeToVisibleChunk.to_visible_chunk(config.page, config.num_pages_shown)
     |> Enum.map(&to_pages(&1, config))
-    |> add_first(config)
-    |> add_last(config)
-  end
-
-  @spec middle(pos_integer()) :: pos_integer()
-  defp middle(i) when rem(i, 2) == 0 do
-    div(i, 2) - 1
-  end
-
-  defp middle(i) when rem(i, 2) == 1 do
-    div(i, 2)
   end
 
   @spec to_pages(pos_integer(), t) :: page_element
@@ -258,6 +236,10 @@ defmodule Numerator do
   end
 
   @spec add_first(list(page_element), t) :: list(page_element | ellipsis_element)
+  defp add_first([], _) do
+    []
+  end
+
   defp add_first([%{page: first_numbered} | _] = middle, %{first_page: first})
        when first == first_numbered do
     middle
@@ -282,11 +264,16 @@ defmodule Numerator do
   end
 
   @spec add_last(list(page_element), t) :: list(page_element | ellipsis_element)
+  defp add_last([], _) do
+    []
+  end
+
   defp add_last(middle, config) do
     add_last(List.last(middle), middle, config)
   end
 
   @spec add_last(page_element, list(page_element), t) :: list(page_element | ellipsis_element)
+
   defp add_last(%{page: last_numbered}, middle, %{last_page: last})
        when last == last_numbered do
     middle
