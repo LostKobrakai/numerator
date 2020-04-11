@@ -36,7 +36,8 @@ defmodule Numerator.MixProject do
       {:excoveralls, "~> 0.10", only: :test},
       {:stream_data, "~> 0.1", only: :test},
       {:dialyxir, "~> 1.0-rc", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.21", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
+      {:benchee, "~> 1.0", only: :dev}
     ]
   end
 
